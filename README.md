@@ -1,2 +1,2 @@
-# newsletter-subscripe
-A simple script for subscriping for emal newsletter
+# newsletter-subscribe
+A simple script for subscribing for email newsletter

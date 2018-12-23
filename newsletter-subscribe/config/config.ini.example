@@ -1,0 +1,9 @@
+[GENERAL]
+email_from = "info@test.org"
+email_repy_to = "info@test.org"
+
+[DATABASE]
+name = ""
+user = ""
+host = ""
+password = ""
