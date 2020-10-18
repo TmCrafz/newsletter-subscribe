@@ -14,4 +14,4 @@
 .~lock.*
 
 # Specific
-newsletter-subscribe/config/config.ini
+*.ini

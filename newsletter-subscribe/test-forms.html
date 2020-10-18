@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Newsletter Forms</title>
+</head>
+<body>
+<h2>Subscribe to newsletter</h2>
+<form method=post action="newsletter.php?subscribe">
+   <input name="email" type="text" placeholder="Email" />
+   <input id=submit type="submit" value="Abschicken">
+</form>
+<h2>Unsubscribe by email</h2>
+<form method=post action="newsletter.php?unsubscribe">
+   <input name="email" type="text" placeholder="Email" />
+   <input id=submit type="submit" value="Abschicken">
+</form>
+<h2>Unsubscribe by u_id</h2>
+<form method=get action="newsletter.php">
+   <input name="u_id" type="text" placeholder="u_id" />
+   <input id=submit type="submit" value="Abschicken">
+</form>
+<h2>Create table if not exists</h2>
+<form method=post action="newsletter.php?installdb">
+   <input id=submit type="submit" value="Abschicken">
+</form>
+
+</body>
+</html>

@@ -1,6 +1,8 @@
 [GENERAL]
 email_from = "info@test.org"
 email_repy_to = "info@test.org"
+; Time to confirm email address in days
+time_to_confirm = "3" 
 
 [DATABASE]
 name = ""
