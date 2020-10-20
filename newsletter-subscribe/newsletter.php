@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 $PRINT_ERRORS = true;
+$SEND_SUCCESSFULLY_SUBSCRIBED_MAIL = false;
 
 function init_db($db_host, $db_user, $db_password, $db_name) {
     $db;
@@ -142,8 +143,66 @@ function unsubscribe_by_email($db, $table_name, $email) {
     return true;
 }
 
-function unsubscribe_by_uid($db, $table_name, $u_id) {
-    $sql = "DELETE FROM `$table_name`
+// function unsubscribe_by_uid($db, $table_name, $u_id) {
+//     $sql = "DELETE FROM `$table_name`
+//         WHERE
+//         `unsubscribe_code` = :u_id";
+//     $stmt = $db->prepare($sql);
+//     if (!$stmt) {
+//         if ($GLOBALS['PRINT_ERRORS'] === true) {
+//             echo "\n ERROR in method:'".__METHOD__."':";
+//             echo "\n Prepare failed PDO::errorInfo():\n";
+//             print_r($db->errorInfo());
+//         }
+//         return false;
+//     }
+//     $stmt->bindParam(':u_id', $u_id);
+//     $result = $stmt->execute();
+//     if (!$result) {
+//         if ($GLOBALS['PRINT_ERRORS'] === true) {
+//             echo "\n ERROR in method:'".__METHOD__."':";
+//             echo "\n Execute failed PDO::errorInfo():\n";
+//             print_r($db->errorInfo());
+//         }
+//         return false;
+//     }
+//     return true;
+// }
+
+function get_uid_by_cid($db, $table_name, $c_id) {
+    $sql = "SELECT `unsubscribe_code`
+        FROM `$table_name`
+        WHERE
+        `confirmation_code` = :c_id";
+    $stmt = $db->prepare($sql);
+    if (!$stmt) {
+        if ($GLOBALS['PRINT_ERRORS'] === true) {
+            echo "\n ERROR in method:'".__METHOD__."':";
+            echo "\n Prepare failed PDO::errorInfo():\n";
+            print_r($db->errorInfo());
+        }
+        return false;
+    }
+    $stmt->bindParam(':c_id', $c_id);
+    $result = $stmt->execute();
+    if (!$result) {
+        if ($GLOBALS['PRINT_ERRORS'] === true) {
+            echo "\n ERROR in method:'".__METHOD__."':";
+            echo "\n Execute failed PDO::errorInfo():\n";
+            print_r($db->errorInfo());
+        }
+        return false;
+    }
+    if ($stmt->rowCount() < 1) {
+        return false;
+    }
+    $row = $stmt->fetch();
+    return $row['unsubscribe_code'];
+}
+
+function get_email_by_uid($db, $table_name, $u_id) {
+    $sql = "SELECT `email`
+        FROM `$table_name`
         WHERE
         `unsubscribe_code` = :u_id";
     $stmt = $db->prepare($sql);
@@ -165,8 +224,13 @@ function unsubscribe_by_uid($db, $table_name, $u_id) {
         }
         return false;
     }
-    return true;
+    if ($stmt->rowCount() < 1) {
+        return false;
+    }
+    $row = $stmt->fetch();
+    return $row['email'];
 }
+
 
 function clean_newsletter_table($db, $table_name, $days_to_confirm) {
     if (!table_exists($db, $table_name)) {
@@ -198,15 +262,15 @@ function clean_newsletter_table($db, $table_name, $days_to_confirm) {
     return true;
 }
 
-function send_confirmation_email($email, $email_from, $reply_to, $confirmation_code) {
+function send_confirmation_request_email($email, $email_from, $reply_to, $confirmation_code) {
     global $ROOT_PATH;
     // Split url into base url and get params 
     $uri_parts = explode('?', $_SERVER['REQUEST_URI'], 2);
     $url = "https://".$_SERVER['HTTP_HOST'].$uri_parts[0];
     // Send confirmation email
-    $subject = file_get_contents($ROOT_PATH."templates/subject.txt");
+    $subject = file_get_contents($ROOT_PATH."templates/subscribtion-request/subject.txt");
     $confirmation_url = $url . '?c_id=' . $confirmation_code;
-    $message = file_get_contents($ROOT_PATH."templates/body.html");
+    $message = file_get_contents($ROOT_PATH."templates/subscribtion-request/body.html");
     $message = str_replace("{confirmation_url}", $confirmation_url, $message);
     $headers = 'MIME-Version: 1.0' . "\r\n" .
         'Content-type: text/html; charset=utf-8' . "\r\n" .
@@ -216,6 +280,27 @@ function send_confirmation_email($email, $email_from, $reply_to, $confirmation_c
         // Send email to customer
     mail($email, $subject, $message, $headers);
 }
+
+function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_id) {
+    global $ROOT_PATH;
+    // Split url into base url and get params 
+    $uri_parts = explode('?', $_SERVER['REQUEST_URI'], 2);
+    $url = "https://".$_SERVER['HTTP_HOST'].$uri_parts[0];
+    // Send confirmation email
+    $subject = file_get_contents($ROOT_PATH."templates/successfully-subscribed/subject.txt");
+    $unsubscribe_url = $url . '?u_id=' . $u_id;
+    $message = file_get_contents($ROOT_PATH."templates/successfully-subscribed/body.html");
+    $message = str_replace("{unsubscribe_url}", $unsubscribe_url, $message);
+    $headers = 'MIME-Version: 1.0' . "\r\n" .
+        'Content-type: text/html; charset=utf-8' . "\r\n" .
+        "From: $email_from" . "\r\n" .
+        "Reply-To: $reply_to" . "\r\n" .
+        'X-Mailer: PHP/' . phpversion();
+        // Send email to customer
+    mail($email, $subject, $message, $headers);
+}
+
+
 $success = false;
 $NEWSLETTER_TABLE_NAME = "newsletter";
 
@@ -246,12 +331,11 @@ if (isset($_GET['subscribe']) && isset($_POST['email'])) {
         $confirmation_code = md5("" . uniqid() . random_int(0, 9999999));
         $unsubscribe_code = md5("" . uniqid() . random_int(0, 9999999));
         
-        
         // Add email data to db
         $result = add_newsletter_entry($db, $NEWSLETTER_TABLE_NAME, $email, $language, $confirmation_code, $unsubscribe_code);
         if ($result === true) {
             // Send confirmation email
-            send_confirmation_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code);
+            send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code);
             $success = true;
         }
     }
@@ -260,8 +344,13 @@ if (isset($_GET['subscribe']) && isset($_POST['email'])) {
 else if (isset($_GET['c_id'])) {
     $c_id = $_GET['c_id'];
     if (!is_null($c_id) && $c_id !== "") {
+        $u_id = get_uid_by_cid($db, $NEWSLETTER_TABLE_NAME, $c_id);
         $result = confirm_email_address($db, $NEWSLETTER_TABLE_NAME, $c_id, $DAYS_TO_CONFIRM);
         if ($result === true) {
+            if ($SEND_SUCCESSFULLY_SUBSCRIBED_MAIL && $u_id !== false) {
+                $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
+                send_successfully_subscribed_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $u_id);
+            }
             $success = true;
         }
     }
@@ -280,7 +369,10 @@ else if(isset($_GET['unsubscribe']) && isset($_POST['email'])) {
 else if (isset($_GET['u_id'])) {
     $u_id = $_GET['u_id'];
     if (!is_null($u_id) && $u_id !== "") {
-        $result = unsubscribe_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
+        // Unsubscribe by email, so when user is subscribed multiple times the user will 
+        // get unsubscribed from all entries (all entries with the email will get deleted)
+        $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
+        $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
             $success = true;
         }
