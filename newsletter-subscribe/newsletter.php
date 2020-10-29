@@ -6,6 +6,12 @@ error_reporting(E_ALL);
 $PRINT_ERRORS = true;
 $SEND_SUCCESSFULLY_SUBSCRIBED_MAIL = false;
 
+function print_result_and_exit($success, $message) {
+    header('Content-Type: application/json');
+    echo json_encode(array('success' => $success, 'message' => $message));
+    exit;
+}
+
 function init_db($db_host, $db_user, $db_password, $db_name) {
     $db;
     try {
@@ -320,13 +326,14 @@ if ($db === false) {
     $success = false;
     echo 'error';
 }
+
 // Clean Newsletter table at every call
 clean_newsletter_table($db, $NEWSLETTER_TABLE_NAME, $DAYS_TO_CONFIRM);
 
 
 if (isset($_GET['subscribe']) && isset($_POST['email'])) {
     $email = $_POST['email'];
-    if (!is_null($email) && $email !== "") {
+    if (!is_null($email) && $email !== "" && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $language = 'de';
         $confirmation_code = md5("" . uniqid() . random_int(0, 9999999));
         $unsubscribe_code = md5("" . uniqid() . random_int(0, 9999999));
@@ -336,8 +343,14 @@ if (isset($_GET['subscribe']) && isset($_POST['email'])) {
         if ($result === true) {
             // Send confirmation email
             send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code);
-            $success = true;
+            print_result_and_exit(true, "");
         }
+        else {
+            print_result_and_exit(false, "error_saving_email");
+        }
+    }
+    else {
+        print_result_and_exit(false, "error_invalid_email");
     }
 }
 // Confirm email address
@@ -351,18 +364,30 @@ else if (isset($_GET['c_id'])) {
                 $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
                 send_successfully_subscribed_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $u_id);
             }
-            $success = true;
+            print_result_and_exit(true, "");
         }
+        else {
+            print_result_and_exit(false, "error_confirming_email");
+        }
+    }
+    else {
+        print_result_and_exit(false, "invalid_c_id");
     }
 }
 // Unsubscripe by email
 else if(isset($_GET['unsubscribe']) && isset($_POST['email'])) {
     $email = $_POST['email'];
-    if (!is_null($email) && $email !== "") {
+    if (!is_null($email) && $email !== "" && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
-            $success = true;
+            print_result_and_exit(true, "");
         }
+        else {
+            print_result_and_exit(false, "error_unsubscribing");
+        }
+    }
+    else {
+        print_result_and_exit(false, "error_invalid_email");
     }
 }
 // Unsubscribe by unsubscribtion code
@@ -374,24 +399,18 @@ else if (isset($_GET['u_id'])) {
         $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
         $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
-            $success = true;
+            print_result_and_exit(true, "");
         }
+        else {
+            print_result_and_exit(false, "error_unsubscribing");
+        }
+    }
+    else {
+        print_result_and_exit(false, "error_invalid_u_id");
     }
 }
 else if(isset($_GET['installdb'])) {
     create_newsletter_table($db, $NEWSLETTER_TABLE_NAME);
-    $success = true;
+    print_result_and_exit(true, "");
 }
-
-if (!$success) {
-    echo 'error';
-    // header('HTTP/1.1 500 Internal Server Error');
-    // header('Content-Type: application/json; charset=UTF-8');
-    // die(json_encode(array('message' => 'ERROR', 'code' => 1337)));
-}
-else {
-    echo 'success';
-}
-
-
 ?>
