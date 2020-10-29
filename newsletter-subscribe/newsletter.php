@@ -332,7 +332,10 @@ clean_newsletter_table($db, $NEWSLETTER_TABLE_NAME, $DAYS_TO_CONFIRM);
 
 
 if (isset($_GET['subscribe'])) {
-    $email = $_POST['email'];
+    $email = "";
+    if (isset($_POST['email'])) {
+        $email = $_POST['email'];
+    }
     if (!is_null($email) && $email !== "" && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $language = 'de';
         $confirmation_code = md5("" . uniqid() . random_int(0, 9999999));
@@ -376,7 +379,11 @@ else if (isset($_GET['c_id'])) {
 }
 // Unsubscripe by email
 else if(isset($_GET['unsubscribe'])) {
-    $email = $_POST['email'];
+    $email = "";
+    if (isset($_POST['email'])) {
+        $email = $_POST['email'];
+    }
+    
     if (!is_null($email) && $email !== "" && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
