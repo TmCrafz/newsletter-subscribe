@@ -288,7 +288,7 @@ function send_confirmation_request_email($email, $email_from, $reply_to, $confir
     $subject = file_get_contents($ROOT_PATH."templates/subscribtion-request/subject.txt");
     $confirmation_url = $url . '?c_id=' . $confirmation_code;
     if ($redirect_mode) {
-        $confirmation_url = $confirmation_url . '&redirect=true';
+        $confirmation_url = $confirmation_url . '&redirect=true&redirect_resulting_email=true';
     }
     $message = file_get_contents($ROOT_PATH."templates/subscribtion-request/body.html");
     $message = str_replace("{confirmation_url}", $confirmation_url, $message);
@@ -329,6 +329,13 @@ $redirect_mode = false;
 if (isset($_GET['redirect']) && $_GET['redirect'] == 'true') {
     $redirect_mode = true;
 }
+// When set to true, urls in email will get 'redirect'flag to activate redirect_mode.
+// In confirmation email for example
+$redirect_resulting_email = false;
+if (isset($_GET['redirect_resulting_email']) && $_GET['redirect_resulting_email'] == 'true') {
+    $redirect_resulting_email = true;
+}
+
 
 
 $CONFIG = parse_ini_file($ROOT_PATH.'config/config.ini', true);
@@ -338,6 +345,7 @@ $EMAIL_REPLY_TO = $CONFIG['GENERAL']['email_repy_to'];
 $DAYS_TO_CONFIRM = $CONFIG['GENERAL']['time_to_confirm'];
 $SEND_SUCCESSFULLY_SUBSCRIBED_MAIL = $CONFIG['GENERAL']['send_successfully_subscribed_email'] == "true" ? true : false;
 $PRINT_ERRORS = ($CONFIG['GENERAL']['print_errors'] === "true") ? true : false;
+
 
 $DB_HOST = $CONFIG['DATABASE']['host'];
 $DB_USER = $CONFIG['DATABASE']['user'];
@@ -366,7 +374,7 @@ if (isset($_GET['subscribe'])) {
         $result = add_newsletter_entry($db, $NEWSLETTER_TABLE_NAME, $email, $language, $confirmation_code, $unsubscribe_code);
         if ($result === true) {
             // Send confirmation email
-            send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code, $redirect_mode);
+            send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code, $redirect_resulting_email);
             handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_subscribe_success'], true, "");
         }
         else {
@@ -386,7 +394,7 @@ else if (isset($_GET['c_id'])) {
         if ($result === true) {
             if ($SEND_SUCCESSFULLY_SUBSCRIBED_MAIL && $u_id !== false) {
                 $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
-                send_successfully_subscribed_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $u_id);
+                send_successfully_subscribed_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $u_id, $redirect_resulting_email);
             }
             handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_confirm_email_success'], true, "");
         }
