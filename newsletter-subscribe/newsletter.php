@@ -3,9 +3,6 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$PRINT_ERRORS = true;
-$SEND_SUCCESSFULLY_SUBSCRIBED_MAIL = false;
-
 function print_result_and_exit($success, $message) {
     header('Content-Type: application/json');
     echo json_encode(array('success' => $success, 'message' => $message));
@@ -326,7 +323,6 @@ function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_i
     mail($email, $subject, $message, $headers);
 }
 
-$NEWSLETTER_TABLE_NAME = "newsletter";
 $ROOT_PATH = __DIR__."/";
 
 $redirect_mode = false;
@@ -336,9 +332,12 @@ if (isset($_GET['redirect']) && $_GET['redirect'] == 'true') {
 
 
 $CONFIG = parse_ini_file($ROOT_PATH.'config/config.ini', true);
+$NEWSLETTER_TABLE_NAME = $CONFIG['GENERAL']['newsletter_table_name'];
 $EMAIL_FROM = $CONFIG['GENERAL']['email_from'];
 $EMAIL_REPLY_TO = $CONFIG['GENERAL']['email_repy_to'];
 $DAYS_TO_CONFIRM = $CONFIG['GENERAL']['time_to_confirm'];
+$SEND_SUCCESSFULLY_SUBSCRIBED_MAIL = $CONFIG['GENERAL']['send_successfully_subscribed_email'] == "true" ? true : false;
+$PRINT_ERRORS = ($CONFIG['GENERAL']['print_errors'] === "true") ? true : false;
 
 $DB_HOST = $CONFIG['DATABASE']['host'];
 $DB_USER = $CONFIG['DATABASE']['user'];

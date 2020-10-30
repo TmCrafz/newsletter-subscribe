@@ -1,12 +1,15 @@
 [GENERAL]
+newsletter_table_name = "newsletter";
 email_from = "info@test.org"
 email_repy_to = "info@test.org"
 ; Time to confirm email address in days
 time_to_confirm = "3" 
+send_successfully_subscribed_email = "false"
+print_errors = "true"
 
 [REDIRECT]
-url_technical_error = ""
-url_install_db_success = "";
+url_technical_error = "awesomeurl.html?technical_error"
+url_install_db_success = "awesomeurl.html?succesfull";
 
 url_subscribe_success = ""
 url_subscribe_failed_invalid_email = ""
@@ -23,7 +26,6 @@ url_unsubscribe_email_failed_general_error = ""
 url_unsubscribe_uid_success = ""
 url_unsubscribe_uid_failed_invalid_uid = ""
 url_unsubscribe_uid_failed_general_error = ""
-
 
 [DATABASE]
 name = ""
