@@ -17,6 +17,15 @@ function redirect_and_exit($url) {
     exit;
 }
 
+function handle_output_and_exit($redirect_mode, $redirect_url, $success, $message) {
+    if ($redirect_mode) {
+        redirect_and_exit($redirect_url);
+    }
+    else {
+        print_result_and_exit($success, $message);
+    }
+}
+
 function init_db($db_host, $db_user, $db_password, $db_name) {
     $db;
     try {
@@ -273,7 +282,7 @@ function clean_newsletter_table($db, $table_name, $days_to_confirm) {
     return true;
 }
 
-function send_confirmation_request_email($email, $email_from, $reply_to, $confirmation_code) {
+function send_confirmation_request_email($email, $email_from, $reply_to, $confirmation_code, $redirect_mode) {
     global $ROOT_PATH;
     // Split url into base url and get params 
     $uri_parts = explode('?', $_SERVER['REQUEST_URI'], 2);
@@ -281,6 +290,9 @@ function send_confirmation_request_email($email, $email_from, $reply_to, $confir
     // Send confirmation email
     $subject = file_get_contents($ROOT_PATH."templates/subscribtion-request/subject.txt");
     $confirmation_url = $url . '?c_id=' . $confirmation_code;
+    if ($redirect_mode) {
+        $confirmation_url = $confirmation_url . '&redirect=true';
+    }
     $message = file_get_contents($ROOT_PATH."templates/subscribtion-request/body.html");
     $message = str_replace("{confirmation_url}", $confirmation_url, $message);
     $headers = 'MIME-Version: 1.0' . "\r\n" .
@@ -292,7 +304,7 @@ function send_confirmation_request_email($email, $email_from, $reply_to, $confir
     mail($email, $subject, $message, $headers);
 }
 
-function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_id) {
+function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_id, $redirect_mode) {
     global $ROOT_PATH;
     // Split url into base url and get params 
     $uri_parts = explode('?', $_SERVER['REQUEST_URI'], 2);
@@ -300,6 +312,9 @@ function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_i
     // Send confirmation email
     $subject = file_get_contents($ROOT_PATH."templates/successfully-subscribed/subject.txt");
     $unsubscribe_url = $url . '?u_id=' . $u_id;
+    if ($redirect_mode) {
+        $unsubscribe_url = $unsubscribe_url . '&redirect=true';
+    }
     $message = file_get_contents($ROOT_PATH."templates/successfully-subscribed/body.html");
     $message = str_replace("{unsubscribe_url}", $unsubscribe_url, $message);
     $headers = 'MIME-Version: 1.0' . "\r\n" .
@@ -311,11 +326,14 @@ function send_successfully_subscribed_email($email, $email_from, $reply_to, $u_i
     mail($email, $subject, $message, $headers);
 }
 
-
-$success = false;
 $NEWSLETTER_TABLE_NAME = "newsletter";
-
 $ROOT_PATH = __DIR__."/";
+
+$redirect_mode = false;
+if (isset($_GET['redirect']) && $_GET['redirect'] == 'true') {
+    $redirect_mode = true;
+}
+
 
 $CONFIG = parse_ini_file($ROOT_PATH.'config/config.ini', true);
 $EMAIL_FROM = $CONFIG['GENERAL']['email_from'];
@@ -328,7 +346,7 @@ $DB_PASSWORD = $CONFIG['DATABASE']['password'];
 $DB_NAME = $CONFIG['DATABASE']['name'];
 $db = init_db($DB_HOST, $DB_USER, $DB_PASSWORD, $DB_NAME);
 if ($db === false) {
-    print_result_and_exit(false, "error_technical");
+    handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_technical_error'], false, "error_technical");
 }
 
 // Clean Newsletter table at every call
@@ -349,15 +367,15 @@ if (isset($_GET['subscribe'])) {
         $result = add_newsletter_entry($db, $NEWSLETTER_TABLE_NAME, $email, $language, $confirmation_code, $unsubscribe_code);
         if ($result === true) {
             // Send confirmation email
-            send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code);
-            print_result_and_exit(true, "");
+            send_confirmation_request_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $confirmation_code, $redirect_mode);
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_subscribe_success'], true, "");
         }
         else {
-            print_result_and_exit(false, "error_saving_email");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_subscribe_failed_saving_email_error'], false, "error_saving_email");
         }
     }
     else {
-        print_result_and_exit(false, "error_invalid_email");
+        handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_subscribe_failed_invalid_email'], false, "error_invalid_email");
     }
 }
 // Confirm email address
@@ -371,17 +389,17 @@ else if (isset($_GET['c_id'])) {
                 $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
                 send_successfully_subscribed_email($email, $EMAIL_FROM, $EMAIL_REPLY_TO, $u_id);
             }
-            print_result_and_exit(true, "");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_confirm_email_success'], true, "");
         }
         else {
-            print_result_and_exit(false, "error_confirming_email");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_confirm_email_failed_general_error'], false, "error_confirming_email");
         }
     }
     else {
-        print_result_and_exit(false, "invalid_c_id");
+        handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_confirm_email_failed_invalid_cid'], false, "invalid_c_id");
     }
 }
-// Unsubscripe by email
+// Unsubscribe by email
 else if(isset($_GET['unsubscribe'])) {
     $email = "";
     if (isset($_POST['email'])) {
@@ -391,14 +409,14 @@ else if(isset($_GET['unsubscribe'])) {
     if (!is_null($email) && $email !== "" && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
-            print_result_and_exit(true, "");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_email_success'], true, "");
         }
         else {
-            print_result_and_exit(false, "error_unsubscribing");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_email_failed_general_error'], false, "error_unsubscribing");
         }
     }
     else {
-        print_result_and_exit(false, "error_invalid_email");
+        handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_email_failed_invalid_email'], false, "error_invalid_email");
     }
 }
 // Unsubscribe by unsubscribtion code
@@ -410,18 +428,18 @@ else if (isset($_GET['u_id'])) {
         $email = get_email_by_uid($db, $NEWSLETTER_TABLE_NAME, $u_id);
         $result = unsubscribe_by_email($db, $NEWSLETTER_TABLE_NAME, $email);
         if ($result === true) {
-            print_result_and_exit(true, "");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_uid_success'], true, "");
         }
         else {
-            print_result_and_exit(false, "error_unsubscribing");
+            handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_uid_failed_general_error'], false, "error_unsubscribing");
         }
     }
     else {
-        print_result_and_exit(false, "error_invalid_u_id");
+        handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_unsubscribe_uid_failed_invalid_uid'], false, "error_invalid_u_id");
     }
 }
 else if(isset($_GET['installdb'])) {
     create_newsletter_table($db, $NEWSLETTER_TABLE_NAME);
-    print_result_and_exit(true, "");
+    handle_output_and_exit($redirect_mode, $CONFIG['REDIRECT']['url_install_db_success'], true, "");
 }
 ?>

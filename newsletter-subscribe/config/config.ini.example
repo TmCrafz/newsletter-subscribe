@@ -5,10 +5,24 @@ email_repy_to = "info@test.org"
 time_to_confirm = "3" 
 
 [REDIRECT]
-url_subscribe_success=""
-url_subscribe_failed=""
-url_subscribe_success=""
-url_subscribe_success=""
+url_technical_error = ""
+url_install_db_success = "";
+
+url_subscribe_success = ""
+url_subscribe_failed_invalid_email = ""
+url_subscribe_failed_saving_email_error = ""
+
+url_confirm_email_success = ""
+url_confirm_email_failed_invalid_cid = ""
+url_confirm_email_failed_general_error = ""
+
+url_unsubscribe_email_success = ""
+url_unsubscribe_email_failed_invalid_email = ""
+url_unsubscribe_email_failed_general_error = ""
+
+url_unsubscribe_uid_success = ""
+url_unsubscribe_uid_failed_invalid_uid = ""
+url_unsubscribe_uid_failed_general_error = ""
 
 
 [DATABASE]
