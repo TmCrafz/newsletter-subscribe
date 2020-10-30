@@ -12,6 +12,11 @@ function print_result_and_exit($success, $message) {
     exit;
 }
 
+function redirect_and_exit($url) {
+    header('Location: '.$url, true, 302);
+    exit;
+}
+
 function init_db($db_host, $db_user, $db_password, $db_name) {
     $db;
     try {
@@ -323,8 +328,7 @@ $DB_PASSWORD = $CONFIG['DATABASE']['password'];
 $DB_NAME = $CONFIG['DATABASE']['name'];
 $db = init_db($DB_HOST, $DB_USER, $DB_PASSWORD, $DB_NAME);
 if ($db === false) {
-    $success = false;
-    echo 'error';
+    print_result_and_exit(false, "error_technical");
 }
 
 // Clean Newsletter table at every call

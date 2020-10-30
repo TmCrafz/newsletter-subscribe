@@ -4,6 +4,13 @@ email_repy_to = "info@test.org"
 ; Time to confirm email address in days
 time_to_confirm = "3" 
 
+[REDIRECT]
+url_subscribe_success=""
+url_subscribe_failed=""
+url_subscribe_success=""
+url_subscribe_success=""
+
+
 [DATABASE]
 name = ""
 user = ""
