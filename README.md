@@ -15,8 +15,8 @@ Both in Json Mode:
 ```
 https://test.de?subscribe
 ```  
-
-
+  
+  
 Json output is of form:
 Success  
 ```
