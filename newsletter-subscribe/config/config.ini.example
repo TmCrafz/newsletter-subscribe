@@ -1,9 +1,11 @@
 [GENERAL]
+; The table name of the newsletter
 newsletter_table_name = "newsletter";
 email_from = "info@test.org"
 email_repy_to = "info@test.org"
 ; Time to confirm email address in days
 time_to_confirm = "3" 
+; Send another email after successfully confirming email to tell that confirmation was successfull
 send_successfully_subscribed_email = "false"
 print_errors = "true"
 
